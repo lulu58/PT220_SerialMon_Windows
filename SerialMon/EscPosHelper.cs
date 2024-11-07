@@ -1,12 +1,15 @@
 ﻿//=================================================================================
 // Einige ESC/POS Druckbefehle
 // https://medium.com/@osamainayat4999/esc-pos-commands-f0ab0c3b22cc
+// https://tabshop.smartlab.at/help-topics/help-esc-pos-codes.html
 //=================================================================================
 // 07.11.2024   initial
 
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,14 +22,81 @@ namespace SerialMon
         // ESC_POS_Command
         public enum EPCmd
         {
-            EP_INIT,
+            EP_INIT, EP_STATUS,
             EP_LEFT, EP_CENTER, EP_RIGHT,
-            EP_LF, EP_LF2,
+            EP_LF, EP_LF2, EP_LF5,
+            EP_UL0, EP_UL1, EP_UL2,         // Underline off - 1pt - 2pt
             EP_DOWN
+        }
+
+        public bool Diag { get; set; } = true;
+
+        private SerialPort _sp = null;
+
+        public EscPosHelper(SerialPort serialPort = null)
+        {
+            _sp = serialPort;
+        }
+
+        public void SetSerialPort(SerialPort serialPort)
+        {
+            _sp = serialPort;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="line"></param>
+        public void PrintLine(string text)
+        {
+            if (_sp != null)
+            {
+                _sp.WriteLine(text);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="line"></param>
+        public void PrintText(string text)
+        {
+            if (_sp != null)
+            {
+                _sp.Write(text);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="bytes"></param>
+        public void PrintBuffer(char[] buffer, int bytes)
+        {
+            _sp.Write(buffer, 0, bytes);
+        }
+
+
+        public void PrintCmd(EPCmd cmd)
+        {
+            if (_sp != null)
+            {
+                _sp.Write(GetEscPos(cmd));
+            }
+        }
+
+        public void PrintEscPos(EPCmd cmd, int value)
+        {
+            if (_sp != null)
+            {
+                _sp.Write(GetEscPosN(cmd, value));
+            }
         }
 
 
         // 'ESC' = "\x1B"
+        // 'GS'  = "\x1D" 	GS 	group separator
 
         // Justification ASCII      Code(Hex)
         // Left         ESC a 0 	0x1B 0x61 0x00
@@ -40,34 +110,77 @@ namespace SerialMon
         /// <returns></returns>
         public string GetEscPos(EPCmd cmd)
         {
-            string s = "";
+            string s = string.Empty;
             switch (cmd)
             {
                 // set printing defaults
                 case EPCmd.EP_INIT:   s = "\x1B@"; break;
-                // Justification
-                case EPCmd.EP_LEFT:   s = "\x1Ba\x00"; break;
-                case EPCmd.EP_CENTER: s = "\x1Ba\x01"; break;
-                case EPCmd.EP_RIGHT:  s = "\x1Ba\x02"; break;
-                case EPCmd.EP_LF2:    s = "\x1Bd\x02"; break;      // "ESCd\x02"
+
+                //case EPCmd.EP_STATUS: s = "\x1BV"; break;
+                // Justification ESC a  n
+                case EPCmd.EP_LEFT:   s = "\x1B\x61\x00"; break;
+                case EPCmd.EP_CENTER: s = "\x1B\x61\x01"; break;
+                case EPCmd.EP_RIGHT:  s = "\x1B\x61\x02"; break;
+                // Underline ESC -  n
+                case EPCmd.EP_UL0:    s = "\x1B-0"; break;             // no underline 
+                case EPCmd.EP_UL1:    s = "\x1B-1"; break;             // underline 1pt
+                case EPCmd.EP_UL2:    s = "\x1B-2"; break;             // underline 2pt
+                // multiple line feed
+                case EPCmd.EP_LF2:    s = "\x1B\x64\x02"; break;       // "ESCd\x02"
+                case EPCmd.EP_LF5:    s = "\x1B\x64\x05"; break;       // "ESCd\x05"
+                default: s = "unknown ESC/POS!\n"; break;
             }
+            //Debug.WriteLineIf(Diag, s);
+            foreach (char c in s)
+            {
+                byte b = (byte)c;
+                Debug.WriteLine($"0x{b:X2}");
+            }
+            Debug.WriteLine("------------------");
             return s;
         }
 
-        // 
-        public string GetEscPos(EPCmd cmd, int value)
+        /// <summary>
+        /// Kommandos mit n Wiederholungen
+        /// </summary>
+        /// <param name="cmd"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public string GetEscPosN(EPCmd cmd, int n)
         {
-            string s = "";
-            if ((value > 0) && (value < 256))
+            string s = string.Empty;
+            if ((n > 0) && (n < 256))
             {
                 switch (cmd)
                 {
-                    case EPCmd.EP_LF: s = "\x1Bd" + (byte)value; break;
+                    case EPCmd.EP_LF: s = "\x1B\x64" + (char)n; break;
                     default: s = "unknown ESC/POS!\n";  break;
                 }
             }
+            //Debug.WriteLineIf(Diag, s);
+            foreach(char c in s) 
+            {
+                byte b = (byte)c;
+                Debug.WriteLine($"0x{b:X2}");
+            }
+            Debug.WriteLine("------------------");
             return s;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="msg"></param>
+        private void M2P(string msg)
+        {
+            while (msg.Contains("ESC"))
+            {
+                msg = msg.Replace("ESC", "\x1B");   // \e = 27 wird noch nicht unterstützt...
+            }
+            Debug.WriteLine("print: " + msg);
+            _sp.WriteLine(msg);
+        }
+
 
     }
 }

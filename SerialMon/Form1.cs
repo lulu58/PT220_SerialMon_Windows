@@ -126,6 +126,7 @@ namespace Visutronik.SerialMon
         /// <param name="e"></param>
         private void buttonClose_Click(object sender, EventArgs e)
         {
+            Debug.WriteLine("... exit ...");
             this.Close();
         }
 
@@ -137,6 +138,7 @@ namespace Visutronik.SerialMon
         private void cbxPort_SelectedIndexChanged(object sender, EventArgs e)
         {
             this.port = (string)cbxPort.SelectedItem;
+            Debug.WriteLine($"... {port} ...");
         }
 
         /// <summary>
@@ -147,6 +149,7 @@ namespace Visutronik.SerialMon
         private void cbxBaud_SelectedIndexChanged(object sender, EventArgs e)
         {
             baudrate = Convert.ToInt32(cbxBaud.SelectedItem);
+            Debug.WriteLine($"... {baudrate} ...");
         }
 
         /// <summary>
@@ -270,6 +273,7 @@ namespace Visutronik.SerialMon
                 sp.NewLine = "\r\n";    // IceFighterData.EOT;  statt wie beim Senden "\r\n";
                 //sp.NewLine = "\n";    // Arduino Druckmesser
                 sp.ReadTimeout = 500;
+                sp.WriteTimeout = 200;
                 sp.DataReceived += OnSerialportDataReceived;
                 sp.PinChanged += sp_PinChanged;
                 sp.ErrorReceived += sp_ErrorReceived;
@@ -297,6 +301,7 @@ namespace Visutronik.SerialMon
                     Debug.WriteLine($" - {sp.PortName} closing");
                     sp.Close();
                 }
+                ShowStatus("Port geschlossen");
             }
         }
 
@@ -436,34 +441,32 @@ namespace Visutronik.SerialMon
                 ShowStatus("Port nicht geöffnet!");
                 return;
             }
+            // give ep instance the connected port
+            ep.SetSerialPort(sp);
 
             // some ESC/POS output
-            // https://tabshop.smartlab.at/help-topics/help-esc-pos-codes.html
-            //M2P("ESC@");        // reset
-            //M2P("ESC!\x20");    // italic
-            //M2P("Visutronik GmbH");
-            sp.WriteLine(ep.GetEscPos(EscPosHelper.EPCmd.EP_INIT));
-            sp.WriteLine("Good morning!");
-            //sp.WriteLine(ep.GetEscPos(EscPosHelper.EPCmd.EP_LF2, 4));
-            M2P("ESCd\x02");    // feed 2 lines
-            sp.WriteLine("..............................");
-            sp.WriteLine(ep.GetEscPos(EscPosHelper.EPCmd.EP_LF2));
-            sp.WriteLine("Don't worry, be happy!");
+            ep.PrintCmd(EscPosHelper.EPCmd.EP_INIT);
+            ep.PrintLine("Visutronik GmbH");
+            ep.PrintLine("1234567890123456789012345678901234567890\n************************");
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL1); ep.PrintLine("underline 1");         // ok
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL2); ep.PrintLine("underline 2");         // ok
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL0); ep.PrintLine("Good morning!");       // ok
+
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_RIGHT); ep.PrintLine("rechts");            // ok
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_LEFT);  ep.PrintLine("links");             // ok
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_CENTER); ep.PrintLine("zentriert");        // ok
+
+            ep.PrintCmd(EscPosHelper.EPCmd.EP_INIT);
+            ep.PrintLine("... now 3 empty lines ...");
+            ep.PrintEscPos(EscPosHelper.EPCmd.EP_LF, 3);
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_LF5);                          // ok
+            //ep.PrintLine("Don't worry, be happy!");
             //M2P("ESCd\x02");    // feed 2 lines
-            M2P("bye...");
-            //M2P("ESC@\x1B\x2D\x02 Hello World");
-            //M2P("ESCd\x02");    // feed 2 lines
+            //ep.PrintCmd(EscPosHelper.EPCmd.EP_STATUS);
+            ep.PrintLine("bye...");
+            ep.PrintCmd(EscPosHelper.EPCmd.EP_LF2);                          // ok
         }
 
-        private void M2P(string msg)
-        {
-            while (msg.Contains("ESC"))
-            {
-                msg = msg.Replace("ESC", "\x1B");   // \e = 27 wird noch nicht unterstützt...
-            }
-            Debug.WriteLine("print: " + msg);
-            sp.WriteLine(msg);
-        }
 
         private void btnPrint_Click(object sender, EventArgs e)
         {
