@@ -13,12 +13,23 @@ using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Visutronik.SerialMon;
 
-namespace SerialMon
+namespace Visutronik.Printers
 {
 
-    public class EscPosHelper
+    public sealed class EscPosHelper
     {
+        #region ----- internal vars -----------
+
+        // Instantiierung
+        private static EscPosHelper _instance = new EscPosHelper();
+        public static EscPosHelper Instance { get { return _instance; } }
+
+        #endregion
+
+
+
         // ESC_POS_Command
         public enum EPCmd
         {
@@ -26,7 +37,7 @@ namespace SerialMon
             EP_LEFT, EP_CENTER, EP_RIGHT,
             EP_LF, EP_LF2, EP_LF5,
             EP_UL0, EP_UL1, EP_UL2,         // Underline off - 1pt - 2pt
-            EP_DOWN
+            EP_TRM1, EP_TRM4                // Transmit status
         }
 
         public bool Diag { get; set; } = true;
@@ -52,6 +63,7 @@ namespace SerialMon
             if (_sp != null)
             {
                 _sp.WriteLine(text);
+                Debug.WriteLineIf(Diag, text);
             }
         }
 
@@ -64,6 +76,7 @@ namespace SerialMon
             if (_sp != null)
             {
                 _sp.Write(text);
+                Debug.WriteLineIf(Diag, text);
             }
         }
 
@@ -128,15 +141,21 @@ namespace SerialMon
                 // multiple line feed
                 case EPCmd.EP_LF2:    s = "\x1B\x64\x02"; break;       // "ESCd\x02"
                 case EPCmd.EP_LF5:    s = "\x1B\x64\x05"; break;       // "ESCd\x05"
+                // Transmit printer / paper status
+                case EPCmd.EP_TRM1:   s = "\x10\x04\x01"; break;       // DLE EOT n=1   Printer status  
+                case EPCmd.EP_TRM4:   s = "\x10\x04\x04"; break;       // DLE EOT n=4   Paper sensor status
                 default: s = "unknown ESC/POS!\n"; break;
             }
-            //Debug.WriteLineIf(Diag, s);
-            foreach (char c in s)
+            if (Diag)
             {
-                byte b = (byte)c;
-                Debug.WriteLine($"0x{b:X2}");
+                Debug.WriteLine("------------------");
+                foreach (char c in s)
+                {
+                    byte b = (byte)c;
+                    Debug.Write($"0x{b:X2} ");
+                }
+                Debug.WriteLine("\n------------------");
             }
-            Debug.WriteLine("------------------");
             return s;
         }
 
@@ -157,13 +176,16 @@ namespace SerialMon
                     default: s = "unknown ESC/POS!\n";  break;
                 }
             }
-            //Debug.WriteLineIf(Diag, s);
-            foreach(char c in s) 
+            if (Diag)
             {
-                byte b = (byte)c;
-                Debug.WriteLine($"0x{b:X2}");
+                Debug.WriteLine("------------------");
+                foreach (char c in s)
+                {
+                    byte b = (byte)c;
+                    Debug.Write($"0x{b:X2} ");
+                }
+                Debug.WriteLine("\n------------------");
             }
-            Debug.WriteLine("------------------");
             return s;
         }
 

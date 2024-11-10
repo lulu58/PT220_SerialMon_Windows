@@ -63,12 +63,12 @@ namespace Visutronik.SerialMon
             this.listBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.listBox1.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.listBox1.Font = new System.Drawing.Font("Courier New", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.listBox1.FormattingEnabled = true;
-            this.listBox1.ItemHeight = 18;
+            this.listBox1.ItemHeight = 16;
             this.listBox1.Location = new System.Drawing.Point(12, 13);
             this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(447, 364);
+            this.listBox1.Size = new System.Drawing.Size(447, 356);
             this.listBox1.TabIndex = 1;
             // 
             // buttonClose
@@ -148,6 +148,7 @@ namespace Visutronik.SerialMon
             // 
             // chkZeit
             // 
+            this.chkZeit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.chkZeit.AutoSize = true;
             this.chkZeit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.chkZeit.Location = new System.Drawing.Point(466, 120);
@@ -160,6 +161,8 @@ namespace Visutronik.SerialMon
             // 
             // textBox1
             // 
+            this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.textBox1.Location = new System.Drawing.Point(12, 385);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(447, 29);
@@ -167,14 +170,14 @@ namespace Visutronik.SerialMon
             // 
             // btnSend
             // 
-            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSend.Location = new System.Drawing.Point(469, 383);
             this.btnSend.Name = "btnSend";
             this.btnSend.Size = new System.Drawing.Size(75, 30);
             this.btnSend.TabIndex = 11;
             this.btnSend.Text = "Senden";
             this.btnSend.UseVisualStyleBackColor = true;
-            this.btnSend.Click += new System.EventHandler(this.BtnSend_Click);
+            this.btnSend.Click += new System.EventHandler(this.Send_Click);
             // 
             // btnPrint
             // 
@@ -185,10 +188,11 @@ namespace Visutronik.SerialMon
             this.btnPrint.TabIndex = 12;
             this.btnPrint.Text = "Print";
             this.btnPrint.UseVisualStyleBackColor = true;
-            this.btnPrint.Click += new System.EventHandler(this.btnPrint_Click);
+            this.btnPrint.Click += new System.EventHandler(this.Print_Click);
             // 
             // chkCRLF
             // 
+            this.chkCRLF.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.chkCRLF.AutoSize = true;
             this.chkCRLF.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.chkCRLF.Location = new System.Drawing.Point(465, 151);
@@ -221,6 +225,7 @@ namespace Visutronik.SerialMon
             this.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
+            this.MinimumSize = new System.Drawing.Size(300, 510);
             this.Name = "Form1";
             this.Text = "SerialMon für Arduino";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnFormClosing);

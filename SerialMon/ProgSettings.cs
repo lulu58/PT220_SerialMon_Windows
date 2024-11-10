@@ -35,8 +35,11 @@ namespace Visutronik.SerialMon
 
         // --- Einstellungsmodus ---
 
-        [Description("Mode"), Category("")]
+        [Description("DateTime Mode"), Category("")]
         public int Mode { get; set; } = 0;
+
+        [Description("Serial port line end chars"), Category("")]
+        public int CRLF { get; set; } = 0;
 
 		// --- Window size and location ---
 
@@ -112,6 +115,8 @@ namespace Visutronik.SerialMon
 				xmlset = new XmlAppSettings(XmlSettingsFile, false);
 				LogFolder		= xmlset.Read("Log-Verzeichnis", LogFolder);
                 Mode = xmlset.Read("Mode", Mode);
+				CRLF = xmlset.Read("CRLF", CRLF);
+
                 SerialPort = xmlset.Read("SerialPort", SerialPort);
 				SerialBaudRate = xmlset.Read("BaudRate", SerialBaudRate);
                 // Window               
@@ -150,9 +155,10 @@ namespace Visutronik.SerialMon
 				xmlset = new XmlAppSettings(XmlSettingsFile, false);
 
 				// Dateipfade	
-				xmlset.Write("Log-Verzeichnis", this.LogFolder);
+				xmlset.Write("Log-Verzeichnis", LogFolder);
 
-                xmlset.Write("Mode", this.Mode);
+                xmlset.Write("Mode", Mode);
+                xmlset.Write("CRLF", CRLF);
                 xmlset.Write("SerialPort", SerialPort);
                 xmlset.Write("BaudRate", SerialBaudRate);
 
@@ -187,7 +193,8 @@ namespace Visutronik.SerialMon
 			Debug.WriteLine("--- DEBUG Benutzereinstellungen ---");
 
 			Debug.WriteLine("Log-Verzeichnis: " + LogFolder);
-            Debug.WriteLine("Mode       : " + this.Mode);
+            Debug.WriteLine("Mode       : " + Mode);
+            Debug.WriteLine("CRLF       : " + CRLF);
             Debug.WriteLine("SerialPort : " + SerialPort);
             Debug.WriteLine("BaudRate   : " + SerialBaudRate);
 

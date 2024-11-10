@@ -6,6 +6,7 @@
 // 30.10.2024   V1.1 add settings 
 // 05.11.2024   V1.2 add Send + Print 
 // 05.11.2024   V1.3 add EscPosHelper class
+// 07.11-2024   V1.4 add PT_220 class
 //======================================================================================
 // unter .NET >= 5.0 Verweis auf Assembly "System.Io.Ports" zum Projekt hinzufügen!
 
@@ -14,19 +15,19 @@ using System.Threading;
 using System.IO.Ports;
 using System.Windows.Forms;
 using System.Diagnostics;
-using SerialMon;
+using Visutronik.Printers;
 
 namespace Visutronik.SerialMon
 {
     public partial class Form1 : Form
     {
-        const string PROGVER = "SerialMon V1.3 (11.2024)";
+        const string PROGVER = "SerialMon V1.4 (08.11.2024)";
         const string STR_DATE_TIME_FORMAT = "yyyy-MM-dd_hh-mm";
+
+        private bool NoPrinter = false;
 
         readonly SerialPort sp = new SerialPort();
         readonly ProgSettings settings = ProgSettings.Instance;     // Singleton class
-
-        readonly EscPosHelper ep = new EscPosHelper();
 
         string[] ports;
         string port = "";
@@ -54,6 +55,9 @@ namespace Visutronik.SerialMon
         {
             settings.SetSettingsPath("");   // im Programmverzeichnis
             settings.LoadSettings();
+
+            chkCRLF.Checked = settings.CRLF > 0;
+            chkZeit.Checked = settings.Mode > 0;
 
             int idx = 0;
             ports = SerialPort.GetPortNames();
@@ -151,6 +155,33 @@ namespace Visutronik.SerialMon
             baudrate = Convert.ToInt32(cbxBaud.SelectedItem);
             Debug.WriteLine($"... {baudrate} ...");
         }
+        /// <summary>
+        /// activate timestamp in output
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Zeit_CheckedChanged(object sender, EventArgs e)
+        {
+            settings.Mode = chkZeit.Checked ? 1 : 0;
+        }
+
+        /// <summary>
+        /// switch CRLF / LF at end of line in SerialPort.ReadLine / WriteLine
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CRLF_CheckedChanged(object sender, EventArgs e)
+        {
+            if (sender == chkCRLF)
+            {
+                if (chkCRLF.Checked)
+                    sp.NewLine = "\r\n";
+                else
+                    sp.NewLine = "\n";
+
+                settings.CRLF = chkCRLF.Checked ? 1 : 0;
+            }
+        }
 
         /// <summary>
         /// Setze Flag zum Speichern empfangener Daten
@@ -194,6 +225,16 @@ namespace Visutronik.SerialMon
         private void Speichern_Click(object sender, EventArgs e)
         {
             Sichern();
+        }
+
+        /// <summary>
+        /// send the content of input box to serial port
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Send_Click(object sender, EventArgs e)
+        {
+            Senden(textBox1.Text);
         }
 
         #endregion
@@ -274,7 +315,11 @@ namespace Visutronik.SerialMon
                 //sp.NewLine = "\n";    // Arduino Druckmesser
                 sp.ReadTimeout = 500;
                 sp.WriteTimeout = 200;
-                sp.DataReceived += OnSerialportDataReceived;
+                // TODO sp.DataReceived aktivieren, wenn kein BT-Printer am Port hängt
+                if (NoPrinter)
+                {
+                    sp.DataReceived += OnSerialportDataReceived;
+                }
                 sp.PinChanged += sp_PinChanged;
                 sp.ErrorReceived += sp_ErrorReceived;
                 sp.Open();
@@ -314,6 +359,8 @@ namespace Visutronik.SerialMon
         {
             try
             {
+                Thread.Sleep(10);
+                Debug.WriteLine($" rcvd {sp.BytesToRead} bytes");
                 string s = sp.ReadLine();
 
                 // wenn Zeilenende CRLF enthält ---> entfernen
@@ -349,7 +396,7 @@ namespace Visutronik.SerialMon
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                Debug.WriteLine("OnSerialportDataReceived: " + ex.Message);
             }
         }
 
@@ -398,18 +445,8 @@ namespace Visutronik.SerialMon
             return true;
         }
 
-        private void Zeit_CheckedChanged(object sender, EventArgs e)
-        {
-            settings.Mode = chkZeit.Checked ? 1 : 0;
-        }
-
-        private void BtnSend_Click(object sender, EventArgs e)
-        {
-            Senden(textBox1.Text);
-        }
-
         /// <summary>
-        /// 
+        /// send msg as line to serial port
         /// </summary>
         /// <param name="msg"></param>
         private void Senden(string msg)
@@ -431,58 +468,20 @@ namespace Visutronik.SerialMon
         }
 
         /// <summary>
-        /// Drucken auf ESC/POS Thermal Printer (PT-220)
-        /// PT-220 als BLE-Gerät, in Bluetooth-Einstellungen COM-Port (ausgehend) zufügen!
+        /// make a test print to connected bluetooth label printer
         /// </summary>
-        private void SendEscPos()
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Print_Click(object sender, EventArgs e)
         {
-            if (!sp.IsOpen)
-            {
-                ShowStatus("Port nicht geöffnet!");
-                return;
-            }
-            // give ep instance the connected port
-            ep.SetSerialPort(sp);
+            Output($"Printing with PT-220 Thermal Printer");
+            PT_220 pt_220 = new PT_220();
+            pt_220.VirtualSerialPort = sp.PortName;
+            pt_220.PrintTest(sp);
 
-            // some ESC/POS output
-            ep.PrintCmd(EscPosHelper.EPCmd.EP_INIT);
-            ep.PrintLine("Visutronik GmbH");
-            ep.PrintLine("1234567890123456789012345678901234567890\n************************");
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL1); ep.PrintLine("underline 1");         // ok
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL2); ep.PrintLine("underline 2");         // ok
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_UL0); ep.PrintLine("Good morning!");       // ok
-
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_RIGHT); ep.PrintLine("rechts");            // ok
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_LEFT);  ep.PrintLine("links");             // ok
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_CENTER); ep.PrintLine("zentriert");        // ok
-
-            ep.PrintCmd(EscPosHelper.EPCmd.EP_INIT);
-            ep.PrintLine("... now 3 empty lines ...");
-            ep.PrintEscPos(EscPosHelper.EPCmd.EP_LF, 3);
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_LF5);                          // ok
-            //ep.PrintLine("Don't worry, be happy!");
-            //M2P("ESCd\x02");    // feed 2 lines
-            //ep.PrintCmd(EscPosHelper.EPCmd.EP_STATUS);
-            ep.PrintLine("bye...");
-            ep.PrintCmd(EscPosHelper.EPCmd.EP_LF2);                          // ok
+            Output($"Papierstatus: {pt_220.PaperStatus}");
         }
 
-
-        private void btnPrint_Click(object sender, EventArgs e)
-        {
-            SendEscPos();
-        }
-
-        private void CRLF_CheckedChanged(object sender, EventArgs e)
-        {
-            if (sender == chkCRLF)
-            {
-                if (chkCRLF.Checked)
-                    sp.NewLine = "\r\n";
-                else
-                    sp.NewLine = "\n";
-            }
-        }
     }
 }
 
